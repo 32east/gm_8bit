@@ -46,7 +46,7 @@ namespace AudioEffects {
 		samples = outIdx;
 	}
 
-	void Reverb(uint16_t* sampleBuffer, int samples, float decay, float density) {
+	void Reverb(uint16_t* sampleBuffer, int samples, float decay = 0.5f, float density = 0.5f) {
 		for (int i = 0; i < samples; i++) {
 			int delay = i * decay;
 			if (i + delay >= samples) break;
@@ -54,7 +54,7 @@ namespace AudioEffects {
 		}
 	}
 
-	void VoiceInMask(uint16_t* sampleBuffer, int samples, float lowPassFreq) {
+	void VoiceInMask(uint16_t* sampleBuffer, int samples, float lowPassFreq = 500.0f) {
 		for (int i = 0; i < samples; i++) {
 			if (sampleBuffer[i] < lowPassFreq) sampleBuffer[i] = 0;
 		}

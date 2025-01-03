@@ -110,6 +110,12 @@ void hook_BroadcastVoiceData(IClient* cl, uint nBytes, char* data, int64 xuid) {
 		case AudioEffects::EFF_DESAMPLE:
 			AudioEffects::Desample((uint16_t*)&decompressedBuffer, samples, g_eightbit->desampleRate);
 			break;
+		case AudioEffects::EFF_REVERB:
+			AudioEffects::Reverb((uint16_t*)&decompressedBuffer, samples, g_eightbit->decay, g_eightbit->reverbDensity);
+			break;
+		case AudioEffects::EFF_VOICE_IN_MASK:
+			AudioEffects::VoiceInMask((uint16_t*)&decompressedBuffer, samples, g_eightbit->lowPassFreq);
+			break;
 		default:
 			break;
 		}
@@ -131,6 +137,21 @@ void hook_BroadcastVoiceData(IClient* cl, uint nBytes, char* data, int64 xuid) {
 	else {
 		return detour_BroadcastVoiceData.GetTrampoline<SV_BroadcastVoiceData>()(cl, nBytes, data, xuid);
 	}
+}
+
+LUA_FUNCTION_STATIC(eightbit_setdecay) {
+	g_eightbit->decay = (float)LUA->GetNumber(1);
+	return 0;
+}
+
+LUA_FUNCTION_STATIC(eightbit_setreverbdensity) {
+	g_eightbit->reverbDensity = (float)LUA->GetNumber(1);
+	return 0;
+}
+
+LUA_FUNCTION_STATIC(eightbit_setlowPassFreq) {
+	g_eightbit->lowPassFreq = (float)LUA->GetNumber(1);
+	return 0;
 }
 
 LUA_FUNCTION_STATIC(eightbit_crush) {
@@ -237,12 +258,16 @@ GMOD_MODULE_OPEN()
 		LUA->PushCFunction(eightbit_broadcast);
 		LUA->SetTable(-3);
 
-		LUA->PushString("SetGainFactor");
-		LUA->PushCFunction(eightbit_gain);
+		LUA->PushString("SetDecay");
+		LUA->PushCFunction(eightbit_setdecay);
+		LUA->SetTable(-3);
+	
+		LUA->PushString("SetReverbDensity");
+		LUA->PushCFunction(eightbit_setreverbdensity);
 		LUA->SetTable(-3);
 
-		LUA->PushString("SetDesampleRate");
-		LUA->PushCFunction(eightbit_setdesamplerate);
+		LUA->PushString("SetLowPassFreq");
+		LUA->PushCFunction(eightbit_setlowPassFreq);
 		LUA->SetTable(-3);
 
 		LUA->PushString("SetBroadcastIP");
@@ -263,6 +288,14 @@ GMOD_MODULE_OPEN()
 
 		LUA->PushString("EFF_BITCRUSH");
 		LUA->PushNumber(AudioEffects::EFF_BITCRUSH);
+		LUA->SetTable(-3);
+
+		LUA->PushString("EFF_REVERB");
+		LUA->PushNumber(AudioEffects::EFF_REVERB);
+		LUA->SetTable(-3);
+
+		LUA->PushString("EFF_VOICE_IN_MASK");
+		LUA->PushNumber(AudioEffects::EFF_VOICE_IN_MASK);
 		LUA->SetTable(-3);
 	LUA->SetTable(-3);
 	LUA->Pop();
