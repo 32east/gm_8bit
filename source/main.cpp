@@ -107,14 +107,17 @@ void hook_BroadcastVoiceData(IClient* cl, uint nBytes, char* data, int64 xuid) {
 		case AudioEffects::EFF_BITCRUSH:
 			AudioEffects::BitCrush((uint16_t*)&decompressedBuffer, samples, g_eightbit->crushFactor, g_eightbit->gainFactor);
 			break;
-		case AudioEffects::EFF_REVERB:
-			AudioEffects::Reverb((uint16_t*)&decompressedBuffer, samples, g_eightbit->decay, g_eightbit->reverbDensity);
-			break;
 		case AudioEffects::EFF_VOICE_IN_MASK:
-			AudioEffects::VoiceInMask((uint16_t*)&decompressedBuffer, samples, g_eightbit->resonanceFrequency, g_eightbit->resonanceAmount);
+			AudioEffects::VoiceInMask((uint16_t*)&decompressedBuffer, samples, g_eightbit->mufflingFactor);
 			break;
-		case AudioEffects::EFF_PITCH_SHIFT:
-			AudioEffects::PitchShift((uint16_t*)&decompressedBuffer, samples, g_eightbit->pitchFactor);
+		case AudioEffects::EFF_REVERB:
+			AudioEffects::Reverb((uint16_t*)&decompressedBuffer, samples, g_eightbit->decay, g_eightbit->delay);
+			break;
+		case AudioEffects::EFF_PITCH:
+			AudioEffects::PitchShift((uint16_t*)&decompressedBuffer, samples, g_eightbit->factor);
+			break;
+		case AudioEffects::EFF_COMBINE:
+			AudioEffects::Combine((uint16_t*)&decompressedBuffer, samples);
 			break;
 		default:
 			break;
@@ -139,30 +142,6 @@ void hook_BroadcastVoiceData(IClient* cl, uint nBytes, char* data, int64 xuid) {
 	}
 }
 
-LUA_FUNCTION_STATIC(eightbit_setpitchfactor) {
-	g_eightbit->pitchFactor = (float)LUA->GetNumber(1);
-	return 0;
-}
-
-LUA_FUNCTION_STATIC(eightbit_setdecay) {
-	g_eightbit->decay = (float)LUA->GetNumber(1);
-	return 0;
-}
-
-LUA_FUNCTION_STATIC(eightbit_setreverbdensity) {
-	g_eightbit->reverbDensity = (float)LUA->GetNumber(1);
-	return 0;
-}
-
-LUA_FUNCTION_STATIC(eightbit_setresonanceFrequency) {
-	g_eightbit->resonanceFrequency = (float)LUA->GetNumber(1);
-	return 0;
-}
-
-LUA_FUNCTION_STATIC(eightbit_setresonanceAmount) {
-	g_eightbit->resonanceAmount = (float)LUA->GetNumber(1);
-	return 0;
-}
 
 LUA_FUNCTION_STATIC(eightbit_crush) {
 	g_eightbit->crushFactor = (int)LUA->GetNumber(1);
@@ -219,6 +198,30 @@ LUA_FUNCTION_STATIC(eightbit_enableEffect) {
 	return 0;
 }
 
+LUA_FUNCTION_STATIC(eightbit_mufflingFactor) {
+	g_eightbit->mufflingFactor = (float)LUA->GetNumber(1);
+	return 0;
+}
+
+LUA_FUNCTION_STATIC(eightbit_decay) {
+	g_eightbit->decay = (float)LUA->GetNumber(1);
+	return 0;
+}
+
+LUA_FUNCTION_STATIC(eightbit_delay) {
+	g_eightbit->delay = (int)LUA->GetNumber(1);
+	return 0;
+}
+
+LUA_FUNCTION_STATIC(eightbit_factor) {
+	g_eightbit->factor = (float)LUA->GetNumber(1);
+	return 0;
+}
+
+LUA_FUNCTION_STATIC(eightbit_mufflingFactor) {
+	g_eightbit->mufflingFactor = (float)LUA->GetNumber(1);
+	return 0;
+}
 
 GMOD_MODULE_OPEN()
 {
@@ -263,20 +266,21 @@ GMOD_MODULE_OPEN()
 		LUA->PushCFunction(eightbit_broadcast);
 		LUA->SetTable(-3);
 
+	//shit starts here
 		LUA->PushString("SetDecay");
-		LUA->PushCFunction(eightbit_setdecay);
-		LUA->SetTable(-3);
-	
-		LUA->PushString("SetReverbDensity");
-		LUA->PushCFunction(eightbit_setreverbdensity);
+		LUA->PushCFunction(eightbit_decay);
 		LUA->SetTable(-3);
 
-		LUA->PushString("SetResonanceFrequency");
-		LUA->PushCFunction(eightbit_setresonanceFrequency);
+		LUA->PushString("SetDelay");
+		LUA->PushCFunction(eightbit_delay);
 		LUA->SetTable(-3);
 
-		LUA->PushString("SetResonanceAmount");
-		LUA->PushCFunction(eightbit_setresonanceAmount);
+		LUA->PushString("SetFactor");
+		LUA->PushCFunction(eightbit_factor);
+		LUA->SetTable(-3);
+
+		LUA->PushString("SetMufflingFactor");
+		LUA->PushCFunction(eightbit_mufflingFactor);
 		LUA->SetTable(-3);
 
 		LUA->PushString("SetBroadcastIP");
@@ -299,17 +303,22 @@ GMOD_MODULE_OPEN()
 		LUA->PushNumber(AudioEffects::EFF_BITCRUSH);
 		LUA->SetTable(-3);
 
-		LUA->PushString("EFF_REVERB");
-		LUA->PushNumber(AudioEffects::EFF_REVERB);
-		LUA->SetTable(-3);
-
 		LUA->PushString("EFF_VOICE_IN_MASK");
 		LUA->PushNumber(AudioEffects::EFF_VOICE_IN_MASK);
 		LUA->SetTable(-3);
 
-		LUA->PushString("EFF_PITCH_SHIFT");
-		LUA->PushNumber(AudioEffects::EFF_PITCH_SHIFT);
+		LUA->PushString("EFF_REVERB");
+		LUA->PushNumber(AudioEffects::EFF_REVERB);
 		LUA->SetTable(-3);
+
+		LUA->PushString("EFF_PITCH");
+		LUA->PushNumber(AudioEffects::EFF_PITCH);
+		LUA->SetTable(-3);
+
+		LUA->PushString("EFF_COMBINE");
+		LUA->PushNumber(AudioEffects::EFF_COMBINE);
+		LUA->SetTable(-3);
+		//OK
 	LUA->SetTable(-3);
 	LUA->Pop();
 
