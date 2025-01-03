@@ -154,8 +154,13 @@ LUA_FUNCTION_STATIC(eightbit_setreverbdensity) {
 	return 0;
 }
 
-LUA_FUNCTION_STATIC(eightbit_setlowPassFreq) {
-	g_eightbit->lowPassFreq = (float)LUA->GetNumber(1);
+LUA_FUNCTION_STATIC(eightbit_setresonanceFrequency) {
+	g_eightbit->resonanceFrequency = (float)LUA->GetNumber(1);
+	return 0;
+}
+
+LUA_FUNCTION_STATIC(eightbit_setresonanceAmount) {
+	g_eightbit->resonanceAmount = (float)LUA->GetNumber(1);
 	return 0;
 }
 
@@ -266,8 +271,12 @@ GMOD_MODULE_OPEN()
 		LUA->PushCFunction(eightbit_setreverbdensity);
 		LUA->SetTable(-3);
 
-		LUA->PushString("SetLowPassFreq");
-		LUA->PushCFunction(eightbit_setlowPassFreq);
+		LUA->PushString("SetResonanceFrequency");
+		LUA->PushCFunction(eightbit_setresonanceFrequency);
+		LUA->SetTable(-3);
+
+		LUA->PushString("SetResonanceAmount");
+		LUA->PushCFunction(eightbit_setresonanceAmount);
 		LUA->SetTable(-3);
 
 		LUA->PushString("SetBroadcastIP");
