@@ -9,7 +9,8 @@ struct EightbitState {
 	int desampleRate = 2;
 	float decay = 0.5;
 	float reverbDensity = 0.5;
-	float lowPassFreq = 500;
+	float resonanceFrequency = 500;
+	float resonanceAmount = 0.5;
 	float pitchFactor = 1.2;
 	uint16_t port = 4000;
 	std::string ip = "127.0.0.1";
