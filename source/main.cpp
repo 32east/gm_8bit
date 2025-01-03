@@ -218,11 +218,6 @@ LUA_FUNCTION_STATIC(eightbit_factor) {
 	return 0;
 }
 
-LUA_FUNCTION_STATIC(eightbit_mufflingFactor) {
-	g_eightbit->mufflingFactor = (float)LUA->GetNumber(1);
-	return 0;
-}
-
 GMOD_MODULE_OPEN()
 {
 	g_eightbit = new EightbitState();
@@ -266,6 +261,14 @@ GMOD_MODULE_OPEN()
 		LUA->PushCFunction(eightbit_broadcast);
 		LUA->SetTable(-3);
 
+		LUA->PushString("SetBroadcastIP");
+		LUA->PushCFunction(eightbit_setbroadcastip);
+		LUA->SetTable(-3);
+
+		LUA->PushString("SetBroadcastPort");
+		LUA->PushCFunction(eightbit_setbroadcastport);
+		LUA->SetTable(-3);
+
 	//shit starts here
 		LUA->PushString("SetDecay");
 		LUA->PushCFunction(eightbit_decay);
@@ -281,18 +284,6 @@ GMOD_MODULE_OPEN()
 
 		LUA->PushString("SetMufflingFactor");
 		LUA->PushCFunction(eightbit_mufflingFactor);
-		LUA->SetTable(-3);
-
-		LUA->PushString("SetBroadcastIP");
-		LUA->PushCFunction(eightbit_setbroadcastip);
-		LUA->SetTable(-3);
-
-		LUA->PushString("SetBroadcastPort");
-		LUA->PushCFunction(eightbit_setbroadcastport);
-		LUA->SetTable(-3);
-
-		LUA->PushString("SetPitchFactor");
-		LUA->PushCFunction(eightbit_setpitchfactor);
 		LUA->SetTable(-3);
 
 		LUA->PushString("EFF_NONE");
