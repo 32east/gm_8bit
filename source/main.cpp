@@ -108,7 +108,7 @@ void hook_BroadcastVoiceData(IClient* cl, uint nBytes, char* data, int64 xuid) {
 			AudioEffects::BitCrush((uint16_t*)&decompressedBuffer, samples, g_eightbit->crushFactor, g_eightbit->gainFactor);
 			break;
 		case AudioEffects::EFF_VOICE_IN_MASK:
-			AudioEffects::VoiceInMask((uint16_t*)&decompressedBuffer, samples, g_eightbit->mufflingFactor);
+			AudioEffects::VoiceInMask((uint16_t*)&decompressedBuffer, samples);
 			break;
 		case AudioEffects::EFF_REVERB:
 			AudioEffects::Reverb((uint16_t*)&decompressedBuffer, samples, g_eightbit->decay, g_eightbit->delay);
