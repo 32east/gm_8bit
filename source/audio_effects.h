@@ -14,6 +14,7 @@ namespace AudioEffects {
                 EFF_PITCH_SHIFT,
         };
 
+        static uint16_t tempBuf[10 * 1024];
         // Improved BitCrush with more natural sound and less artifacts
         void BitCrush(uint16_t* sampleBuffer, int samples, float quant, float gainFactor) {
                 // quant should be between 0 and 1, where 1 is no quantization and 0 is maximum quantization
