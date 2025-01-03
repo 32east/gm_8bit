@@ -7,6 +7,9 @@ struct EightbitState {
 	float gainFactor = 1.2;
 	bool broadcastPackets = false;
 	int desampleRate = 2;
+	float decay = 0.5;
+	float reverbDensity = 0.5;
+	float lowPassFreq = 500;
 	uint16_t port = 4000;
 	std::string ip = "127.0.0.1";
 	std::unordered_map<int, std::tuple<IVoiceCodec*, int>> afflictedPlayers;
