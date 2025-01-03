@@ -107,14 +107,14 @@ void hook_BroadcastVoiceData(IClient* cl, uint nBytes, char* data, int64 xuid) {
 		case AudioEffects::EFF_BITCRUSH:
 			AudioEffects::BitCrush((uint16_t*)&decompressedBuffer, samples, g_eightbit->crushFactor, g_eightbit->gainFactor);
 			break;
-		case AudioEffects::EFF_DESAMPLE:
-			AudioEffects::Desample((uint16_t*)&decompressedBuffer, samples, g_eightbit->desampleRate);
-			break;
 		case AudioEffects::EFF_REVERB:
 			AudioEffects::Reverb((uint16_t*)&decompressedBuffer, samples, g_eightbit->decay, g_eightbit->reverbDensity);
 			break;
 		case AudioEffects::EFF_VOICE_IN_MASK:
 			AudioEffects::VoiceInMask((uint16_t*)&decompressedBuffer, samples, g_eightbit->lowPassFreq);
+			break;
+		case AudioEffects::EFF_PITCH_SHIFT:
+			AudioEffects::PitchShift((uint16_t*)&decompressedBuffer, samples, g_eightbit->pitchFactor);
 			break;
 		default:
 			break;
@@ -137,6 +137,11 @@ void hook_BroadcastVoiceData(IClient* cl, uint nBytes, char* data, int64 xuid) {
 	else {
 		return detour_BroadcastVoiceData.GetTrampoline<SV_BroadcastVoiceData>()(cl, nBytes, data, xuid);
 	}
+}
+
+LUA_FUNCTION_STATIC(eightbit_setpitchfactor) {
+	g_eightbit->pitchFactor = (float)LUA->GetNumber(1);
+	return 0;
 }
 
 LUA_FUNCTION_STATIC(eightbit_setdecay) {
@@ -182,11 +187,6 @@ LUA_FUNCTION_STATIC(eightbit_broadcast) {
 LUA_FUNCTION_STATIC(eightbit_getcrush) {
 	LUA->PushNumber(g_eightbit->crushFactor);
 	return 1;
-}
-
-LUA_FUNCTION_STATIC(eightbit_setdesamplerate) {
-	g_eightbit->desampleRate = (int)LUA->GetNumber(1);
-	return 0;
 }
 
 LUA_FUNCTION_STATIC(eightbit_enableEffect) {
@@ -278,12 +278,12 @@ GMOD_MODULE_OPEN()
 		LUA->PushCFunction(eightbit_setbroadcastport);
 		LUA->SetTable(-3);
 
-		LUA->PushString("EFF_NONE");
-		LUA->PushNumber(AudioEffects::EFF_NONE);
+		LUA->PushString("SetPitchFactor");
+		LUA->PushCFunction(eightbit_setpitchfactor);
 		LUA->SetTable(-3);
 
-		LUA->PushString("EFF_DESAMPLE");
-		LUA->PushNumber(AudioEffects::EFF_DESAMPLE);
+		LUA->PushString("EFF_NONE");
+		LUA->PushNumber(AudioEffects::EFF_NONE);
 		LUA->SetTable(-3);
 
 		LUA->PushString("EFF_BITCRUSH");
@@ -296,6 +296,10 @@ GMOD_MODULE_OPEN()
 
 		LUA->PushString("EFF_VOICE_IN_MASK");
 		LUA->PushNumber(AudioEffects::EFF_VOICE_IN_MASK);
+		LUA->SetTable(-3);
+
+		LUA->PushString("EFF_PITCH_SHIFT");
+		LUA->PushNumber(AudioEffects::EFF_PITCH_SHIFT);
 		LUA->SetTable(-3);
 	LUA->SetTable(-3);
 	LUA->Pop();

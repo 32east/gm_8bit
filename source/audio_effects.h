@@ -9,7 +9,6 @@ namespace AudioEffects {
         enum {
                 EFF_NONE,
                 EFF_BITCRUSH,
-                EFF_DESAMPLE,
                 EFF_REVERB,
                 EFF_VOICE_IN_MASK,
                 EFF_PITCH_SHIFT,
@@ -43,74 +42,79 @@ namespace AudioEffects {
                 }
         }
 
-        static uint16_t tempBuf[10 * 1024];
-        // Improved Desample with better aliasing handling
-        void Desample(uint16_t* inBuffer, int& samples, int desampleRate = 2) {
-                assert(samples / desampleRate + 1 <= sizeof(tempBuf) / sizeof(tempBuf[0]));
-                desampleRate = std::max(1, desampleRate); // Ensure desampleRate is at least 1
+		void Reverb(uint16_t* sampleBuffer, int samples, float decay, float density) {
+			// Parameter validation and clamping (same as before)
+			decay = std::max(0.0f, std::min(1.0f, decay));
+			density = std::max(0.0f, std::min(1.0f, density));
 
-                int outIdx = 0;
-                for (int i = 0; i < samples; i += desampleRate) {
-                        tempBuf[outIdx] = inBuffer[i];
-                        outIdx++;
-                }
+			// Create a delay buffer (circular buffer for efficiency)
+			static float delayBuffer[44100]; // Using float for the delay buffer to reduce quantization error accumulation
+			static int writeIndex = 0;
 
-                std::memcpy(inBuffer, tempBuf, outIdx * sizeof(uint16_t));
-                samples = outIdx;
-        }
+			// Pre-calculate a decay factor per sample
+			float decayPerSample = std::pow(decay, 1.0f / 44100.0f); // Assuming 44.1kHz sample rate
 
-        // Improved Reverb with more natural decay and density control
-        void Reverb(uint16_t* sampleBuffer, int samples, float decay, float density) {
-                // decay should be between 0 and 1, where 0 is no decay and 1 is infinite decay
-                decay = std::max(0.0f, std::min(1.0f, decay));
-                // density should be between 0 and 1, where 0 is no reverb and 1 is maximum density
-                density = std::max(0.0f, std::min(1.0f, density));
+			for (int i = 0; i < samples; i++) {
+				// Calculate the delay time in samples (e.g., 0.5 seconds delay)
+				int delaySamples = static_cast<int>(44100 * 0.5f);
 
-                // Create a delay buffer (circular buffer for efficiency)
-                static uint16_t delayBuffer[44100]; // Assuming a maximum delay of 1 second at 44.1kHz
-                static int writeIndex = 0;
+				// Read from the delay buffer
+				int readIndex = (writeIndex - delaySamples + 44100) % 44100;
+				float delayedSample = delayBuffer[readIndex];
 
-                for (int i = 0; i < samples; i++) {
-                        // Calculate the delay time in samples (e.g., 0.5 seconds delay)
-                        int delaySamples = static_cast<int>(44100 * 0.5f * decay);
+				// Mix the original sample with the delayed sample
+				float outputSample = static_cast<float>(sampleBuffer[i]) + delayedSample * density;
 
-                        // Read from the delay buffer
-                        int readIndex = (writeIndex - delaySamples + 44100) % 44100;
-                        float delayedSample = static_cast<float>(delayBuffer[readIndex]);
+				// Apply decay to the delayed sample before writing it back
+				delayBuffer[writeIndex] = outputSample * decayPerSample;
 
-                        // Mix the original sample with the delayed sample
-                        float outputSample = static_cast<float>(sampleBuffer[i]) + delayedSample * density;
+				// Convert the output sample to 16-bit and apply soft clipping
+				outputSample = std::tanh(outputSample / 32767.0f) * 32767.0f;
+				sampleBuffer[i] = static_cast<uint16_t>(outputSample);
 
-                        // Write the output sample to the delay buffer
-                        delayBuffer[writeIndex] = static_cast<uint16_t>(outputSample);
+				// Update the write index
+				writeIndex = (writeIndex + 1) % 44100;
+			}
+		}
 
-                        // Write the output sample to the output buffer, applying decay
-                        sampleBuffer[i] = static_cast<uint16_t>(outputSample);
+		void VoiceInMask(uint16_t* sampleBuffer, int samples, float resonanceFrequency, float resonanceAmount) {
+			// Simple low-pass filter using a biquad filter design
+			float a0 = 1.0f;
+			float a1 = -1.8f; // Adjust for cutoff frequency
+			float a2 = 0.81f; // Adjust for cutoff frequency
+			float b1 = 0.0f;
+			float b2 = 0.0f;
 
-                        // Update the write index
-                        writeIndex = (writeIndex + 1) % 44100;
-                }
-        }
+			// Resonance parameters
+			resonanceFrequency = std::max(100.0f, std::min(800.0f, resonanceFrequency)); // Clamp to a reasonable range
+			resonanceAmount = std::max(0.0f, std::min(1.0f, resonanceAmount)); // Clamp to 0-1
 
-        // VoiceInMask (High-Pass Filter) - Keeps only high frequencies
-        void VoiceInMask(uint16_t* sampleBuffer, int samples, float cutoffFreq) {
-                // Simple high-pass filter implementation (can be improved with a better filter design)
-                float alpha = 0.9f; // Adjust for filter response (higher = sharper cutoff)
-                float prevSample = 0.0f;
+			// State variables for the filter
+			float x1 = 0.0f, x2 = 0.0f;
+			float y1 = 0.0f, y2 = 0.0f;
 
-                for (int i = 0; i < samples; i++) {
-                        float currentSample = static_cast<float>(sampleBuffer[i]);
-                        float filteredSample = alpha * (prevSample + currentSample - prevSample);
+			for (int i = 0; i < samples; i++) {
+				float x0 = static_cast<float>(sampleBuffer[i]);
 
-                        // Apply a threshold based on cutoff frequency (simplified)
-                        if (std::abs(filteredSample) < cutoffFreq) {
-                                filteredSample = 0.0f;
-                        }
+				// Apply the low-pass filter
+				float y0 = a0 * x0 + a1 * x1 + a2 * x2 - b1 * y1 - b2 * y2;
 
-                        sampleBuffer[i] = static_cast<uint16_t>(filteredSample);
-                        prevSample = filteredSample;
-                }
-        }
+				// Update filter state
+				x2 = x1;
+				x1 = x0;
+				y2 = y1;
+				y1 = y0;
+
+				// Apply resonance (simplified)
+				if (std::abs(y0) > resonanceFrequency) {
+					y0 *= (1.0f + resonanceAmount);
+				}
+
+				// Convert back to 16-bit and apply soft clipping
+				y0 = std::tanh(y0 / 32767.0f) * 32767.0f;
+				sampleBuffer[i] = static_cast<uint16_t>(y0);
+			}
+		}
 
         // Pitch Shifting for "Child Voice" effect
         void PitchShift(uint16_t* sampleBuffer, int& samples, float pitchFactor) {
